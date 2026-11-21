@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Decathlon Play &amp; Borrow — Interactive 3D Booth</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -25,6 +25,7 @@
       padding: 0;
       width: 100%;
       height: 100%;
+      height: 100dvh;
       overflow: hidden;
       background-color: #ffffff;
       font-family: 'Inter', sans-serif;
@@ -37,6 +38,7 @@
       inset: 0;
       width: 100%;
       height: 100%;
+      height: 100dvh;
       background: #ffffff;
       touch-action: none;
     }
@@ -59,6 +61,7 @@
       align-items: center;
       justify-content: center;
       gap: 18px;
+      padding: 24px;
       transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.55s ease;
     }
 
@@ -92,6 +95,25 @@
     body.app-ready .ui-reveal {
       opacity: 1;
       transform: translateY(0);
+    }
+
+    /* Clean Full-Screen Mode (Hide/Show UI) */
+    body.ui-hidden .ui-chrome {
+      opacity: 0 !important;
+      transform: translateY(8px) !important;
+      pointer-events: none !important;
+    }
+
+    #btn-show-ui {
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    body.app-ready.ui-hidden #btn-show-ui {
+      opacity: 1;
+      transform: translateY(0);
       pointer-events: auto;
     }
 
@@ -106,11 +128,16 @@
     .ctrl-btn {
       transition: all 0.18s ease;
       white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .ctrl-btn:hover {
       background-color: #f1f5f9;
       color: #0f172a;
+    }
+
+    .ctrl-btn:active {
+      transform: scale(0.96);
     }
 
     .ctrl-btn.active {
@@ -129,11 +156,66 @@
       color: #0046c8;
     }
 
+    .item-btn:active {
+      transform: scale(0.97);
+    }
+
     .item-btn.active {
       background-color: #0046c8;
       border-color: #0046c8;
       color: #ffffff;
       box-shadow: 0 4px 12px rgba(0, 70, 200, 0.26);
+    }
+
+    /* Safe-area spacing for notched phones & tablets */
+    .safe-top-bar {
+      padding-top: max(0.65rem, env(safe-area-inset-top));
+      padding-left: max(0.65rem, env(safe-area-inset-left));
+      padding-right: max(0.65rem, env(safe-area-inset-right));
+    }
+
+    .safe-bottom-bar {
+      padding-bottom: max(0.65rem, env(safe-area-inset-bottom));
+      padding-left: max(0.5rem, env(safe-area-inset-left));
+      padding-right: max(0.5rem, env(safe-area-inset-right));
+    }
+
+    @media (min-width: 640px) {
+      .safe-top-bar {
+        padding-top: max(1rem, env(safe-area-inset-top));
+        padding-left: max(1rem, env(safe-area-inset-left));
+        padding-right: max(1rem, env(safe-area-inset-right));
+      }
+      .safe-bottom-bar {
+        padding-bottom: max(1.1rem, env(safe-area-inset-bottom));
+      }
+    }
+
+    /* Compact Landscape Phone Optimization (short viewport height) */
+    @media (max-height: 500px) and (orientation: landscape) {
+      .brand-subtitle { display: none !important; }
+      #bottom-dock-inner {
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        align-items: center !important;
+        gap: 0.25rem !important;
+        padding: 0.25rem 0.4rem !important;
+      }
+      #bottom-dock-divider {
+        display: block !important;
+        width: 1px !important;
+        height: 1.15rem !important;
+        margin: 0 0.25rem !important;
+      }
+      .dock-row {
+        width: auto !important;
+        justify-content: flex-start !important;
+      }
+      #item-panel-body {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        width: 18rem !important;
+      }
     }
 
     /* Hide scrollbar cleanly on horizontal mobile toolbar */
@@ -155,67 +237,138 @@
   <!-- 3D WebGL Viewport -->
   <div id="canvas-container"></div>
 
-  <!-- Top-Left Minimal Brand Pill -->
-  <div class="ui-reveal fixed top-3 left-3 sm:top-4 sm:left-4 z-20">
-    <div class="glass-panel rounded-2xl px-3.5 py-2 flex items-center gap-2.5">
-      <span class="w-2.5 h-2.5 rounded-full bg-[#0046c8] shadow-sm"></span>
-      <div class="leading-tight">
-        <div class="text-xs sm:text-sm font-extrabold tracking-tight text-slate-900">DECATHLON <span class="text-[#0046c8]">play &amp; borrow</span></div>
-        <div class="text-[10px] sm:text-[11px] text-slate-500 font-medium">5.00 × 3.00 × 3.00 m • Drag to Orbit / Scroll to Zoom</div>
+  <!-- Responsive Top Bar (Never collides across Mobile, Tablet, Notebook & Desktop) -->
+  <header class="ui-reveal ui-chrome safe-top-bar fixed top-0 left-0 right-0 z-20 flex items-start justify-between gap-2 pointer-events-none">
+    <!-- Top-Left Brand Pill -->
+    <div class="glass-panel pointer-events-auto rounded-2xl px-3 py-2 sm:px-3.5 sm:py-2 flex items-center gap-2 sm:gap-2.5 min-w-0 max-w-[58vw] sm:max-w-none">
+      <span class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[#0046c8] shadow-sm shrink-0"></span>
+      <div class="leading-tight min-w-0">
+        <div class="text-[11px] sm:text-sm font-extrabold tracking-tight text-slate-900 truncate">
+          DECATHLON <span class="text-[#0046c8]">play &amp; borrow</span>
+        </div>
+        <div class="brand-subtitle text-[10px] sm:text-[11px] text-slate-500 font-medium truncate">
+          <span>5.00 × 3.00 × 3.00 m</span>
+          <span class="hidden md:inline"> • Drag to Orbit / Scroll to Zoom</span>
+          <span class="hidden sm:inline md:hidden"> • Drag / Pinch to Zoom</span>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Top-Right Separate Item Inspection Panel -->
-  <div class="ui-reveal fixed top-3 right-3 sm:top-4 sm:right-4 z-20 flex flex-col items-end">
-    <div class="glass-panel rounded-2xl p-2.5 w-48 sm:w-56">
-      <button id="toggle-item-panel" type="button" class="w-full flex items-center justify-between px-1.5 py-1 text-left rounded-xl hover:bg-slate-100/70 transition">
-        <span class="text-[11px] sm:text-xs font-bold text-slate-800 tracking-tight">Inspect Products</span>
-        <span id="item-panel-chevron" class="text-slate-400 text-xs font-bold transition-transform duration-200">▾</span>
+    <!-- Top-Right Controls: Inspect Products Dropdown + Hide UI Toggle -->
+    <div class="flex items-start gap-1.5 sm:gap-2 shrink-0 pointer-events-auto">
+      <div id="item-panel-wrap" class="relative flex flex-col items-end">
+        <button
+          id="toggle-item-panel"
+          type="button"
+          aria-expanded="false"
+          aria-controls="item-panel-body"
+          class="glass-panel rounded-2xl px-3 py-2 sm:px-3.5 sm:py-2.5 flex items-center gap-1.5 sm:gap-2 text-left hover:bg-white transition active:scale-95"
+        >
+          <span class="text-[11px] sm:text-xs font-bold text-slate-800 tracking-tight whitespace-nowrap">
+            <span class="hidden sm:inline">Inspect Products</span>
+            <span class="sm:hidden">Products</span>
+          </span>
+          <svg id="item-panel-chevron" class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+          </svg>
+        </button>
+
+        <!-- Floating Product Inspection Grid Popover -->
+        <div
+          id="item-panel-body"
+          class="glass-panel hidden absolute top-full right-0 mt-2 rounded-2xl p-2 w-56 sm:w-60 grid grid-cols-2 gap-1.5 origin-top-right"
+        >
+          <button type="button" data-view="poster" class="item-btn px-2 py-2.5 sm:py-2 rounded-xl border border-slate-200/80 bg-white/85 text-[11px] font-semibold text-slate-700 flex items-center justify-center">
+            Poster
+          </button>
+          <button type="button" data-view="counter" class="item-btn px-2 py-2.5 sm:py-2 rounded-xl border border-slate-200/80 bg-white/85 text-[11px] font-semibold text-slate-700 flex items-center justify-center">
+            Counter &amp; POS
+          </button>
+          <button type="button" data-view="rackets" class="item-btn px-2 py-2.5 sm:py-2 rounded-xl border border-slate-200/80 bg-white/85 text-[11px] font-semibold text-slate-700 flex items-center justify-center">
+            Rackets
+          </button>
+          <button type="button" data-view="shuttles" class="item-btn px-2 py-2.5 sm:py-2 rounded-xl border border-slate-200/80 bg-white/85 text-[11px] font-semibold text-slate-700 flex items-center justify-center">
+            Shuttles &amp; Tubes
+          </button>
+          <button type="button" data-view="shoes" class="item-btn px-2 py-2.5 sm:py-2 rounded-xl border border-slate-200/80 bg-white/85 text-[11px] font-semibold text-slate-700 flex items-center justify-center">
+            Shoes
+          </button>
+          <button type="button" data-view="socks" class="item-btn px-2 py-2.5 sm:py-2 rounded-xl border border-slate-200/80 bg-white/85 text-[11px] font-semibold text-slate-700 flex items-center justify-center">
+            Socks
+          </button>
+        </div>
+      </div>
+
+      <!-- Clean Full-Screen UI Toggle Button -->
+      <button
+        id="btn-hide-ui"
+        type="button"
+        title="Hide Controls"
+        aria-label="Hide Controls"
+        class="glass-panel rounded-2xl p-2 sm:p-2.5 text-slate-600 hover:text-slate-900 hover:bg-white transition active:scale-95 flex items-center justify-center"
+      >
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.94" />
+          <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a21.8 21.8 0 0 1-3.16 4.19" />
+          <line x1="1" y1="1" x2="23" y2="23" />
+        </svg>
       </button>
-
-      <div id="item-panel-body" class="mt-2 grid grid-cols-2 gap-1.5">
-        <button type="button" data-view="poster" class="item-btn px-2 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-[11px] font-semibold text-slate-700 flex items-center justify-center">
-          Poster
-        </button>
-        <button type="button" data-view="counter" class="item-btn px-2 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-[11px] font-semibold text-slate-700 flex items-center justify-center">
-          Counter &amp; POS
-        </button>
-        <button type="button" data-view="rackets" class="item-btn px-2 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-[11px] font-semibold text-slate-700 flex items-center justify-center">
-          Rackets
-        </button>
-        <button type="button" data-view="shuttles" class="item-btn px-2 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-[11px] font-semibold text-slate-700 flex items-center justify-center">
-          Shuttles &amp; Tubes
-        </button>
-        <button type="button" data-view="shoes" class="item-btn px-2 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-[11px] font-semibold text-slate-700 flex items-center justify-center">
-          Shoes
-        </button>
-        <button type="button" data-view="socks" class="item-btn px-2 py-2 rounded-xl border border-slate-200/80 bg-white/80 text-[11px] font-semibold text-slate-700 flex items-center justify-center">
-          Socks
-        </button>
-      </div>
     </div>
+  </header>
+
+  <!-- Restore Controls Pill (visible only when UI is hidden) -->
+  <div class="safe-bottom-bar fixed bottom-0 right-0 z-30 pointer-events-none">
+    <button
+      id="btn-show-ui"
+      type="button"
+      class="glass-panel rounded-2xl px-3.5 py-2 text-xs font-bold text-slate-700 hover:text-[#0046c8] hover:bg-white transition active:scale-95 flex items-center gap-1.5"
+    >
+      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+      <span>Show Controls</span>
+    </button>
   </div>
 
-  <!-- Bottom Compact Exterior Views & Booth Controls Bar -->
-  <div class="ui-reveal fixed bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 z-20 max-w-[96vw]">
-    <div class="glass-panel rounded-2xl px-2 py-1.5 flex items-center gap-1 overflow-x-auto no-scrollbar">
+  <!-- Responsive Bottom Dock: 2 Compact Rows on Mobile/Tablet, Single Sleek Bar on Laptop/Desktop -->
+  <div class="ui-reveal ui-chrome safe-bottom-bar fixed bottom-0 left-0 right-0 z-20 flex justify-center pointer-events-none">
+    <div id="bottom-dock-inner" class="glass-panel pointer-events-auto rounded-2xl p-1.5 sm:px-2 sm:py-1.5 flex flex-col lg:flex-row items-center gap-1 lg:gap-1 max-w-full">
       <!-- Exterior View Presets -->
-      <button type="button" data-view="iso" class="ctrl-btn active px-3 py-2 rounded-xl text-xs font-semibold text-slate-700">3D View</button>
-      <button type="button" data-view="front" class="ctrl-btn px-3 py-2 rounded-xl text-xs font-semibold text-slate-700">Front</button>
-      <button type="button" data-view="back" class="ctrl-btn px-3 py-2 rounded-xl text-xs font-semibold text-slate-700">Back</button>
-      <button type="button" data-view="left" class="ctrl-btn px-3 py-2 rounded-xl text-xs font-semibold text-slate-700">Left</button>
-      <button type="button" data-view="right" class="ctrl-btn px-3 py-2 rounded-xl text-xs font-semibold text-slate-700">Right</button>
-      <button type="button" data-view="top" class="ctrl-btn px-3 py-2 rounded-xl text-xs font-semibold text-slate-700">Top</button>
+      <div class="dock-row w-full lg:w-auto flex items-center justify-start sm:justify-center gap-1 overflow-x-auto no-scrollbar">
+        <button type="button" data-view="iso" class="ctrl-btn active px-2.5 sm:px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold text-slate-700">
+          <span class="hidden sm:inline">3D View</span>
+          <span class="sm:hidden">3D</span>
+        </button>
+        <button type="button" data-view="front" class="ctrl-btn px-2.5 sm:px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold text-slate-700">Front</button>
+        <button type="button" data-view="back" class="ctrl-btn px-2.5 sm:px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold text-slate-700">Back</button>
+        <button type="button" data-view="left" class="ctrl-btn px-2.5 sm:px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold text-slate-700">Left</button>
+        <button type="button" data-view="right" class="ctrl-btn px-2.5 sm:px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold text-slate-700">Right</button>
+        <button type="button" data-view="top" class="ctrl-btn px-2.5 sm:px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold text-slate-700">Top</button>
+      </div>
 
-      <div class="w-px h-5 bg-slate-200 mx-1 shrink-0"></div>
+      <div id="bottom-dock-divider" class="w-full h-px lg:w-px lg:h-5 bg-slate-200/90 lg:mx-1 shrink-0"></div>
 
       <!-- Interactive Booth Feature Toggles -->
-      <button id="btn-door" type="button" class="ctrl-btn px-3 py-2 rounded-xl text-xs font-semibold text-slate-700">Door</button>
-      <button id="btn-glass" type="button" class="ctrl-btn px-3 py-2 rounded-xl text-xs font-semibold text-slate-700">Hide Glass</button>
-      <button id="btn-lights" type="button" class="ctrl-btn active px-3 py-2 rounded-xl text-xs font-semibold text-slate-700">Interior Lights</button>
-      <button id="btn-dims" type="button" class="ctrl-btn px-3 py-2 rounded-xl text-xs font-semibold text-slate-700">Dimensions</button>
-      <button id="btn-rotate" type="button" class="ctrl-btn px-3 py-2 rounded-xl text-xs font-semibold text-slate-700">Auto Rotate</button>
+      <div class="dock-row w-full lg:w-auto flex items-center justify-start sm:justify-center gap-1 overflow-x-auto no-scrollbar">
+        <button id="btn-door" type="button" class="ctrl-btn px-2.5 sm:px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold text-slate-700">Door</button>
+        <button id="btn-glass" type="button" class="ctrl-btn px-2.5 sm:px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold text-slate-700">
+          <span class="hidden sm:inline">Hide Glass</span>
+          <span class="sm:hidden">Glass</span>
+        </button>
+        <button id="btn-lights" type="button" class="ctrl-btn active px-2.5 sm:px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold text-slate-700">
+          <span class="hidden sm:inline">Interior Lights</span>
+          <span class="sm:hidden">Lights</span>
+        </button>
+        <button id="btn-dims" type="button" class="ctrl-btn px-2.5 sm:px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold text-slate-700">
+          <span class="hidden sm:inline">Dimensions</span>
+          <span class="sm:hidden">Dims</span>
+        </button>
+        <button id="btn-rotate" type="button" class="ctrl-btn px-2.5 sm:px-3 py-2 rounded-xl text-[11px] sm:text-xs font-semibold text-slate-700">
+          <span class="hidden sm:inline">Auto Rotate</span>
+          <span class="sm:hidden">Rotate</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -298,8 +451,8 @@
     let lightsOn = true;
     let showDimensions = false;
     let camAnim = null;
-
-    // =========================================================================
+    let userManualOrbit = false;
+    let setItemPanelOpen = null;
     // 3. PROCEDURAL STUDIO TEXTURES & GITHUB IMAGE LOADERS
     // =========================================================================
     function finalizeTexture(canvas) {
@@ -3170,23 +3323,70 @@
     // =========================================================================
     // 7. CAMERA TRANSITIONS, INTERACTION & UI HANDLERS
     // =========================================================================
+
+    /** Computes aspect-aware camera distance so portrait phones & tablets frame the booth cleanly without touching any 3D model */
+    function getResponsivePose(viewKey) {
+      const preset = CAMERA_VIEWS[viewKey] || CAMERA_VIEWS.iso;
+      const w = window.innerWidth;
+      const h = Math.max(1, window.innerHeight);
+      const aspect = w / h;
+
+      const target = new THREE.Vector3(...preset.target);
+      const basePos = new THREE.Vector3(...preset.pos);
+      const offset = basePos.clone().sub(target);
+
+      let distScale = 1.0;
+      if (aspect < 1.15) {
+        if (viewKey === 'poster') {
+          distScale = Math.min(1.22, Math.max(1.0, 0.72 / aspect));
+        } else if (INTERIOR_VIEWS.has(viewKey)) {
+          distScale = Math.min(1.38, Math.max(1.0, 0.90 / aspect));
+        } else if (viewKey === 'top') {
+          distScale = Math.min(1.85, Math.max(1.0, 1.05 / aspect));
+        } else {
+          distScale = Math.min(1.90, Math.max(1.0, 1.04 / aspect));
+        }
+      } else if (h < 500 && viewKey === 'poster') {
+        distScale = 1.14;
+      }
+
+      return {
+        pos: target.clone().add(offset.multiplyScalar(distScale)),
+        target
+      };
+    }
+
+    function isCompactViewport() {
+      return window.innerWidth < 1024 || window.innerHeight < 560;
+    }
+
     function goToView(viewKey) {
-      const preset = CAMERA_VIEWS[viewKey];
-      if (!preset) return;
+      if (!CAMERA_VIEWS[viewKey]) return;
+      const pose = getResponsivePose(viewKey);
       activeView = viewKey;
+      userManualOrbit = false;
       controls.autoRotate = false;
       document.getElementById('btn-rotate').classList.remove('active');
 
       // Highlight matching button across both bottom bar & top-right item panel
       document.querySelectorAll('[data-view]').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.view === viewKey);
+        const isMatch = btn.dataset.view === viewKey;
+        btn.classList.toggle('active', isMatch);
+        if (isMatch && btn.closest('.dock-row')) {
+          btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
       });
+
+      // Auto-collapse product popover on compact mobile/tablet screens so the inspected product is unobstructed
+      if (isCompactViewport() && setItemPanelOpen) {
+        setItemPanelOpen(false);
+      }
 
       camAnim = {
         startPos: camera.position.clone(),
-        endPos: new THREE.Vector3(...preset.pos),
+        endPos: pose.pos,
         startTarget: controls.target.clone(),
-        endTarget: new THREE.Vector3(...preset.target),
+        endTarget: pose.target,
         t: 0
       };
 
@@ -3206,15 +3406,51 @@
         btn.addEventListener('click', () => goToView(btn.dataset.view));
       });
 
-      // Collapsible Top-Right Item Panel
+      // Collapsible Top-Right Item Panel (open by default on desktop, collapsed on mobile/tablet)
+      const panelWrap = document.getElementById('item-panel-wrap');
       const panelToggle = document.getElementById('toggle-item-panel');
       const panelBody = document.getElementById('item-panel-body');
       const panelChevron = document.getElementById('item-panel-chevron');
-      let panelOpen = true;
-      panelToggle.addEventListener('click', () => {
-        panelOpen = !panelOpen;
+      let panelOpen = !isCompactViewport();
+
+      setItemPanelOpen = (open) => {
+        panelOpen = !!open;
         panelBody.classList.toggle('hidden', !panelOpen);
-        panelChevron.style.transform = panelOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
+        panelToggle.setAttribute('aria-expanded', String(panelOpen));
+        panelChevron.style.transform = panelOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+      };
+      setItemPanelOpen(panelOpen);
+
+      panelToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setItemPanelOpen(!panelOpen);
+      });
+
+      // Tap outside popover to close on mobile/tablet
+      document.addEventListener('pointerdown', (e) => {
+        if (panelOpen && isCompactViewport() && panelWrap && !panelWrap.contains(e.target)) {
+          setItemPanelOpen(false);
+        }
+      });
+
+      // Hide / Show full UI chrome for unobstructed 3D viewing on any screen
+      const btnHideUI = document.getElementById('btn-hide-ui');
+      const btnShowUI = document.getElementById('btn-show-ui');
+      const setUiHidden = (hidden) => {
+        document.body.classList.toggle('ui-hidden', hidden);
+        if (hidden && isCompactViewport()) setItemPanelOpen(false);
+      };
+      btnHideUI.addEventListener('click', () => setUiHidden(true));
+      btnShowUI.addEventListener('click', () => setUiHidden(false));
+
+      // Escape key closes mobile popover or restores hidden controls on desktop/laptop
+      window.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (document.body.classList.contains('ui-hidden')) {
+          setUiHidden(false);
+        } else if (panelOpen && isCompactViewport()) {
+          setItemPanelOpen(false);
+        }
       });
 
       // Door open/close
@@ -3262,9 +3498,13 @@
         if (controls.autoRotate) camAnim = null;
       });
 
-      // Cancel camera tween if user manually drags/zooms
+      // Cancel camera tween & close mobile popover if user manually drags/zooms
       controls.addEventListener('start', () => {
         camAnim = null;
+        userManualOrbit = true;
+        if (panelOpen && isCompactViewport()) {
+          setItemPanelOpen(false);
+        }
       });
     }
 
@@ -3283,8 +3523,9 @@
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0xffffff);
 
-      camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.05, 80);
-      camera.position.set(...CAMERA_VIEWS.iso.pos);
+      const initPose = getResponsivePose('iso');
+      camera = new THREE.PerspectiveCamera(38, window.innerWidth / Math.max(1, window.innerHeight), 0.05, 80);
+      camera.position.copy(initPose.pos);
 
       renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -3326,12 +3567,12 @@
 
       // Smooth 360° Orbit Controls with Deep Zoom enabled (minDistance 0.35m)
       controls = new OrbitControls(camera, renderer.domElement);
-      controls.target.set(...CAMERA_VIEWS.iso.target);
+      controls.target.copy(initPose.target);
       controls.enableDamping = true;
       controls.dampingFactor = 0.065;
       controls.enablePan = true;
       controls.minDistance = 0.35;
-      controls.maxDistance = 16.0;
+      controls.maxDistance = (window.innerWidth / Math.max(1, window.innerHeight)) < 0.8 ? 22.0 : 16.0;
       controls.maxPolarAngle = Math.PI / 2 - 0.015;
       controls.autoRotate = false;
       controls.autoRotateSpeed = 1.1;
@@ -3356,13 +3597,30 @@
       });
 
       window.addEventListener('resize', onResize);
+      window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
       animate();
     }
 
     function onResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      const w = window.innerWidth;
+      const h = Math.max(1, window.innerHeight);
+      const aspect = w / h;
+
+      camera.aspect = aspect;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(w, h);
+
+      if (controls) {
+        controls.maxDistance = aspect < 0.8 ? 22.0 : 16.0;
+      }
+
+      // Reframe active preset automatically on orientation/screen resize unless user manually orbited
+      if (!userManualOrbit && CAMERA_VIEWS[activeView]) {
+        const pose = getResponsivePose(activeView);
+        camera.position.copy(pose.pos);
+        controls.target.copy(pose.target);
+        controls.update();
+      }
     }
 
     function animate() {
